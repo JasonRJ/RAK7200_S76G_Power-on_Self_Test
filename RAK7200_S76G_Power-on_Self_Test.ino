@@ -28,81 +28,87 @@
 #include <SPI.h>
 #include <U8x8lib.h>
 
-#define SX1276_RegVersion     0x42
-#define SSD1306_OLED_I2C_ADDR 0x3C
-#define BMP085_I2CADDR        0x77
-#define BMP280_ADDRESS        0x77
-#define BMP280_ADDRESS_ALT    0x76 // GY-91, SA0 is NC
+#define SX127x_RegVersion                   0x42 // 0x42 RegVersion 0x12 Semtech ID relating the silicon revision
+#define SSD1306_OLED_I2C_ADDR               0x3C
+#define BMx280_ADDRESS                      0x77
+#define BMx280_ADDRESS_ALT                  0x76
+#define LIS3DH_ADDRESS                      0x18
+#define LIS3DH_ADDRESS_ALT                  0x19
 
-#define BMP280_REGISTER_CHIPID 0xD0
+#define BMx280_REGISTER_CHIPID              0xD0
+#define LIS3DH_REGISTER_CHIPID              0x0F
 
-#define BMP280_CHIPID         (0x58)
-#define BME280_CHIPID         (0x60)
-
-#if !defined(USBD_USE_CDC) || defined(DISABLE_GENERIC_SERIALUSB)
-#define Serial                Serial1
-#endif
+#define BMP280_CHIPID                       0x58
+#define BME280_CHIPID                       0x60
+#define LIS3DH_CHIPID                       0x33
 
 // RAK7200 GPIOs
-#define RAK7200_S76G_BLUE_LED             PA8  // Blue LED (D2) active low
-#define RAK7200_S76G_RED_LED              PA11 // Red LED (D3) active low
-#define RAK7200_S76G_GREEN_LED            PA12 // Green LED (D4) active low
-#define RAK7200_S76G_ADC_VBAT             PB0  // ADC connected to the battery (VBATT 1M PB0 1.5M GND) 1.5M / (1M + 1.5M) = 0.6
-#define RAK7200_S76G_CXD5603_POWER_ENABLE PC4  // Enable 1V8 Power to GNSS (U2 TPS62740)
-#define RAK7200_S76G_LIS3DH_INT1          PA0  // LIS3DH (U5) (I2C address 0x19) Interrupt INT1
-#define RAK7200_S76G_LIS3DH_INT2          PB5  // LIS3DH (U5) (I2C address 0x19) Interrupt INT2
-#define RAK7200_S76G_LPS_INT              PA4  // LPS22HB (U7 not installed) (I2C address 0x5C) Interrupt (mutually exclusive with SPI1_NSS)
-#define RAK7200_S76G_MPU_INT              PA5  // MPU9250 (U8) (I2C address 0x68) Interrupt (mutually exclusive with SPI1_CLK)
-#define RAK7200_S76G_TP4054_CHG1          PB1  // ADC TP4054 (U3)
-#define RAK7200_S76G_TP4054_CHG2          PB8  // ADC TP4054 (U3)
+#define RAK7200_S76G_BLUE_LED               PA8  // Blue LED (D2) active low
+#define RAK7200_S76G_RED_LED                PA11 // Red LED (D3) active low
+#define RAK7200_S76G_GREEN_LED              PA12 // Green LED (D4) active low
+#define RAK7200_S76G_ADC_VBAT               PB0  // ADC connected to the battery (VBATT 1M PB0 1.5M GND) 1.5M / (1M + 1.5M) = 0.6
+#define RAK7200_S76G_CXD5603GF_POWER_ENABLE PC4  // Enable 1V8 Power to GNSS (U2 TPS62740)
+#define RAK7200_S76G_LIS3DH_INT1            PA0  // LIS3DH (U5) (I2C address 0x19) Interrupt INT1
+#define RAK7200_S76G_LIS3DH_INT2            PB5  // LIS3DH (U5) (I2C address 0x19) Interrupt INT2
+#define RAK7200_S76G_LPS_INT                PA4  // LPS22HB (U7 not installed) (I2C address 0x5C) Interrupt (mutually exclusive with SPI1_NSS)
+#define RAK7200_S76G_MPU_INT                PA5  // MPU9250 (U8) (I2C address 0x68) Interrupt (mutually exclusive with SPI1_CLK)
+#define RAK7200_S76G_TP4054_CHG1            PB1  // ADC TP4054 (U3)
+#define RAK7200_S76G_TP4054_CHG2            PB8  // ADC TP4054 (U3)
 
 // AcSiP S7xx UART1 (Console)
-#define S7xx_CONSOLE_TX                   PA9  // UART1 (CH340E U1)
-#define S7xx_CONSOLE_RX                   PA10 // UART1 (CH340E U1)
+#define S7xx_CONSOLE_TX                     PA9  // UART1 (CH340E U1)
+#define S7xx_CONSOLE_RX                     PA10 // UART1 (CH340E U1)
 
 // AcSiP S7xx Internal SPI2 STM32L073RZ(U|Y)x <--> SX127x
-#define S7xx_SX127x_MOSI                  PB15 // SPI2
-#define S7xx_SX127x_MISO                  PB14 // SPI2
-#define S7xx_SX127x_SCK                   PB13 // SPI2
-#define S7xx_SX127x_NSS                   PB12 // SPI2
-#define S7xx_SX127x_NRESET                PB10
-#define S7xx_SX127x_DIO0                  PB11
-#define S7xx_SX127x_DIO1                  PC13
-#define S7xx_SX127x_DIO2                  PB9
-#define S7xx_SX127x_DIO3                  PB4  // unused
-#define S7xx_SX127x_DIO4                  PB3  // unused
-#define S7xx_SX127x_DIO5                  PA15 // unused
-#define S7xx_SX127x_ANTENNA_SWITCH_RXTX   PA1  // Radio Antenna Switch 1:RX, 0:TX
+#define S7xx_SX127x_MOSI                    PB15 // SPI2
+#define S7xx_SX127x_MISO                    PB14 // SPI2
+#define S7xx_SX127x_SCK                     PB13 // SPI2
+#define S7xx_SX127x_NSS                     PB12 // SPI2
+#define S7xx_SX127x_NRESET                  PB10
+#define S7xx_SX127x_DIO0                    PB11
+#define S7xx_SX127x_DIO1                    PC13
+#define S7xx_SX127x_DIO2                    PB9
+#define S7xx_SX127x_DIO3                    PB4  // unused
+#define S7xx_SX127x_DIO4                    PB3  // unused
+#define S7xx_SX127x_DIO5                    PA15 // unused
+#define S7xx_SX127x_ANTENNA_SWITCH_RXTX     PA1  // Radio Antenna Switch 1:RX, 0:TX
 
 // AcSiP S7xG SONY CXD5603GF GNSS
-#define S7xG_CXD5603_RESET                PB2  // Reset does not appear to work -- commented out
-#define S7xG_CXD5603_LEVEL_SHIFTER        PC6
-#define S7xG_CXD5603_UART_TX              PC10 // UART4
-#define S7xG_CXD5603_UART_RX              PC11 // UART4
-#define S7xG_CXD5603_BAUD_RATE            115200
+#define S7xG_CXD5603GF_RESET                PB2  // Reset does not appear to work -- commented out
+#define S7xG_CXD5603GF_LEVEL_SHIFTER        PC6
+#define S7xG_CXD5603GF_UART_TX              PC10 // UART4
+#define S7xG_CXD5603GF_UART_RX              PC11 // UART4
+#define S7xG_CXD5603GF_BAUD_RATE            115200
 
 // AcSiP S7xx I2C1
-#define S7xx_I2C_SCL                      PB6  // I2C1
-#define S7xx_I2C_SDA                      PB7  // I2C1
+#define S7xx_I2C_SCL                        PB6  // I2C1
+#define S7xx_I2C_SDA                        PB7  // I2C1
 
-HardwareSerial Serial1(S7xx_CONSOLE_RX, S7xx_CONSOLE_TX);
-HardwareSerial Serial3(S7xG_CXD5603_UART_RX, S7xG_CXD5603_UART_TX);
+//HardwareSerial Serial1(S7xx_CONSOLE_RX, S7xx_CONSOLE_TX);
+HardwareSerial Serial3(S7xG_CXD5603GF_UART_RX, S7xG_CXD5603GF_UART_TX);
 
 U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8_i2c(U8X8_PIN_NONE);
 
 static U8X8_SSD1306_128X64_NONAME_HW_I2C *u8x8 = NULL;
 
 static byte blueLEDstate = HIGH;
-static byte redLEDstate = HIGH;
+static byte redLEDstate = LOW;
 static byte greenLEDstate = HIGH;
+static bool INT1_IRQ = false;
+static bool INT2_IRQ = false;
+static byte I2CData;
 
 static void LIS3DH_INT1_ISR(void) {
+    INT1_IRQ = true;
     Serial.println("***  LIS3DH_INT1_ISR  ***");
-    greenLEDstate = !greenLEDstate;
-    digitalWrite(RAK7200_S76G_GREEN_LED, greenLEDstate);
 }
 
-static bool GNSS_probe() {
+static void LIS3DH_INT2_ISR(void) {
+    INT2_IRQ = true;
+    Serial.println("***  LIS3DH_INT2_ISR  ***");
+}
+
+static bool CXD5603GF_probe() {
     unsigned long startTime = millis();
     char c1, c2;
     c1 = c2 = 0;
@@ -128,43 +134,72 @@ static bool GNSS_probe() {
     return false;
 }
 
-static bool bmp_probe() {
+static bool bmx_probe() {
 #if 1
-    Wire.beginTransmission(BMP280_ADDRESS);
+    Wire.beginTransmission(BMx280_ADDRESS);
     if (Wire.endTransmission() == 0) {
         return true;
     }
-    Wire.beginTransmission(BMP280_ADDRESS_ALT);
+    Wire.beginTransmission(BMx280_ADDRESS_ALT);
     if (Wire.endTransmission() == 0) {
         return true;
     }
 #else
-    Wire.beginTransmission(BMP280_ADDRESS);
-    Wire.write(BMP280_REGISTER_CHIPID);
+    Wire.beginTransmission(BMx280_ADDRESS);
+    Wire.write(BMx280_REGISTER_CHIPID);
     Wire.endTransmission();
-    Wire.requestFrom(BMP280_ADDRESS, (byte)1);
+    Wire.requestFrom(BMx280_ADDRESS, (byte)1);
     if (Wire.read() == BMP280_CHIPID) {
       return true;
     }
-    Wire.beginTransmission(BMP280_ADDRESS_ALT);
-    Wire.write(BMP280_REGISTER_CHIPID);
+    Wire.beginTransmission(BMx280_ADDRESS_ALT);
+    Wire.write(BMx280_REGISTER_CHIPID);
     Wire.endTransmission();
-    Wire.requestFrom(BMP280_ADDRESS_ALT, (byte)1);
+    Wire.requestFrom(BMx280_ADDRESS_ALT, (byte)1);
     if (Wire.read() == BMP280_CHIPID) {
       return true;
     }
-    Wire.beginTransmission(BMP280_ADDRESS);
-    Wire.write(BMP280_REGISTER_CHIPID);
+    Wire.beginTransmission(BMx280_ADDRESS);
+    Wire.write(BMx280_REGISTER_CHIPID);
     Wire.endTransmission();
-    Wire.requestFrom(BMP280_ADDRESS, (byte)1);
+    Wire.requestFrom(BMx280_ADDRESS, (byte)1);
     if (Wire.read() == BME280_CHIPID) {
       return true;
     }
-    Wire.beginTransmission(BMP280_ADDRESS_ALT);
-    Wire.write(BMP280_REGISTER_CHIPID);
+    Wire.beginTransmission(BMx280_ADDRESS_ALT);
+    Wire.write(BMx280_REGISTER_CHIPID);
     Wire.endTransmission();
-    Wire.requestFrom(BMP280_ADDRESS_ALT, (byte)1);
+    Wire.requestFrom(BMx280_ADDRESS_ALT, (byte)1);
     if (Wire.read() == BME280_CHIPID) {
+      return true;
+    }
+#endif
+    return false;
+}
+
+static bool lis3dh_probe() {
+#if 1
+    Wire.beginTransmission(LIS3DH_ADDRESS);
+    if (Wire.endTransmission() == 0) {
+        return true;
+    }
+    Wire.beginTransmission(LIS3DH_ADDRESS_ALT);
+    if (Wire.endTransmission() == 0) {
+        return true;
+    }
+#else
+    Wire.beginTransmission(LIS3DH_ADDRESS);
+    Wire.write(LIS3DH_REGISTER_CHIPID);
+    Wire.endTransmission();
+    Wire.requestFrom(LIS3DH_ADDRESS, (byte)1);
+    if (Wire.read() == LIS3DH_CHIPID) {
+      return true;
+    }
+    Wire.beginTransmission(LIS3DH_ADDRESS_ALT);
+    Wire.write(LIS3DH_REGISTER_CHIPID);
+    Wire.endTransmission();
+    Wire.requestFrom(LIS3DH_ADDRESS_ALT, (byte)1);
+    if (Wire.read() == LIS3DH_CHIPID) {
       return true;
     }
 #endif
@@ -232,6 +267,23 @@ static void STM32_UID(void) {
     Serial.print("kB\n");
 }
 
+void I2CwriteByte(uint8_t I2CAddress, uint8_t registerAddress, uint8_t data)
+{
+    Wire.beginTransmission(I2CAddress);
+    Wire.write(registerAddress);
+    Wire.write(data);
+    Wire.endTransmission();    
+}
+
+uint8_t I2CreadByte(uint8_t I2CAddress, uint8_t registerAddress)
+{
+    Wire.beginTransmission(I2CAddress);
+    Wire.write(registerAddress);
+    Wire.endTransmission();
+    Wire.requestFrom((uint8_t)I2CAddress, (uint8_t)1);
+    return Wire.read();
+}
+
 static void scanI2Cbus(void) {
     byte err, addr;
     int nDevices = 0;
@@ -276,19 +328,22 @@ static void SerialPassThrough(void) {
 }
 
 void setup() {
-    bool has_SX1276 = false;
-    bool has_GNSS = false;
+    bool has_SX127x = false;
+    bool has_CXD5603GF = false;
     bool has_OLED = false;
-    bool has_BMP280 = false;
+    bool has_BMx280 = false;
+    bool has_LIS3DH = false;
     time_t serialStart = millis();
 
     pinMode(RAK7200_S76G_BLUE_LED, OUTPUT);
     digitalWrite(RAK7200_S76G_BLUE_LED, blueLEDstate);
     pinMode(RAK7200_S76G_RED_LED, OUTPUT);
-    digitalWrite(RAK7200_S76G_RED_LED, !redLEDstate);
+    digitalWrite(RAK7200_S76G_RED_LED, redLEDstate);
     pinMode(RAK7200_S76G_GREEN_LED, OUTPUT);
     digitalWrite(RAK7200_S76G_GREEN_LED, greenLEDstate);
 
+    Serial.setTx(S7xx_CONSOLE_TX);
+    Serial.setRx(S7xx_CONSOLE_RX);
     Serial.begin(115200);
     while (!Serial) {
         if ((millis() - serialStart) < 3000) {
@@ -309,8 +364,8 @@ void setup() {
 #endif
 
     // Power On RAK7200 S7xG GNSS
-    pinMode(RAK7200_S76G_CXD5603_POWER_ENABLE, OUTPUT);
-    digitalWrite(RAK7200_S76G_CXD5603_POWER_ENABLE, HIGH);
+    pinMode(RAK7200_S76G_CXD5603GF_POWER_ENABLE, OUTPUT);
+    digitalWrite(RAK7200_S76G_CXD5603GF_POWER_ENABLE, HIGH);
     delay(1250); // Delay 315µs to 800µs ramp up time
 
     delay(2000);
@@ -362,8 +417,8 @@ void setup() {
 
     digitalWrite(S7xx_SX127x_NSS, LOW);
 
-    SPI.transfer(SX1276_RegVersion & 0x7F);
-    has_SX1276 = (SPI.transfer(0x00) == 0x12 ? true : false);
+    SPI.transfer(SX127x_RegVersion & 0x7F);
+    has_SX127x = (SPI.transfer(0x00) == 0x12 ? true : false);
 
     digitalWrite(S7xx_SX127x_NSS, HIGH);
 
@@ -373,29 +428,29 @@ void setup() {
 
     Serial.println(F("Built-in components:"));
 
-    Serial.print(F("RADIO  - "));
-    Serial.println(has_SX1276 ? F("PASS") : F("FAIL"));
+    Serial.print(F("SX127x  - "));
+    Serial.println(has_SX127x ? F("PASS") : F("FAIL"));
 
     if (u8x8) {
         u8x8->clear();
-        u8x8->draw2x2String(0, 0, "RADIO");
-        u8x8->draw2x2String(14, 0, has_SX1276 ? "+" : "-");
+        u8x8->draw2x2String(0, 0, "SX127x");
+        u8x8->draw2x2String(14, 0, has_SX127x ? "+" : "-");
     }
 
-    Serial3.begin(S7xG_CXD5603_BAUD_RATE);
+    Serial3.begin(S7xG_CXD5603GF_BAUD_RATE);
 
-    //pinMode(S7xG_CXD5603_RESET, OUTPUT);
-    //digitalWrite(S7xG_CXD5603_RESET, LOW);
+    //pinMode(S7xG_CXD5603GF_RESET, OUTPUT);
+    //digitalWrite(S7xG_CXD5603GF_RESET, LOW);
 
     // activate 1.8V<->3.3V level shifters
-    pinMode(S7xG_CXD5603_LEVEL_SHIFTER, OUTPUT);
-    digitalWrite(S7xG_CXD5603_LEVEL_SHIFTER, HIGH);
+    pinMode(S7xG_CXD5603GF_LEVEL_SHIFTER, OUTPUT);
+    digitalWrite(S7xG_CXD5603GF_LEVEL_SHIFTER, HIGH);
 
     // keep RST low to ensure proper IC reset
     //delay(200);
 
     // release
-    //digitalWrite(S7xG_CXD5603_RESET, HIGH);
+    //digitalWrite(S7xG_CXD5603GF_RESET, HIGH);
 
     // give Sony GNSS few ms to warm up
     delay(100);
@@ -406,13 +461,13 @@ void setup() {
     Serial3.write("@GPPS 0x1\r\n"); // Enable PPS
     Serial.println(Serial3.readStringUntil('\n'));
 
-    has_GNSS = GNSS_probe();
-    Serial.print(F("GNSS   - "));
-    Serial.println(has_GNSS ? F("PASS") : F("FAIL"));
+    has_CXD5603GF = CXD5603GF_probe();
+    Serial.print(F("CXD5603GF   - "));
+    Serial.println(has_CXD5603GF ? F("PASS") : F("FAIL"));
 
     if (u8x8) {
-        u8x8->draw2x2String(0, 2, "GNSS");
-        u8x8->draw2x2String(14, 2, has_GNSS ? "+" : "-");
+        u8x8->draw2x2String(0, 2, "CXD5603GF");
+        u8x8->draw2x2String(14, 2, has_CXD5603GF ? "+" : "-");
     }
 
     Serial.println();
@@ -425,13 +480,22 @@ void setup() {
         u8x8->draw2x2String(14, 4, has_OLED ? "+" : "-");
     }
 
-    has_BMP280 = bmp_probe();
+    has_BMx280 = bmx_probe();
     Serial.print(F("BMx280 - "));
-    Serial.println(has_BMP280 ? F("PASS") : F("FAIL"));
+    Serial.println(has_BMx280 ? F("PASS") : F("FAIL"));
 
     if (u8x8) {
         u8x8->draw2x2String(0, 6, "BMx280");
-        u8x8->draw2x2String(14, 6, has_BMP280 ? "+" : "-");
+        u8x8->draw2x2String(14, 6, has_BMx280 ? "+" : "-");
+    }
+
+    has_LIS3DH = lis3dh_probe();
+    Serial.print(F("LIS3DH - "));
+    Serial.println(has_LIS3DH ? F("PASS") : F("FAIL"));
+
+    if (u8x8) {
+        u8x8->draw2x2String(0, 6, "LIS3DH");
+        u8x8->draw2x2String(14, 6, has_LIS3DH ? "+" : "-");
     }
 
     Wire.end();
@@ -442,11 +506,15 @@ void setup() {
     Wire.setSDA(S7xx_I2C_SDA);
     Wire.begin();
     scanI2Cbus();
-    Wire.end();
+    //Wire.end();
 
     Serial.println();
     Serial.println(F("POST is completed."));
     Serial.println();
+    Serial.println();
+    Serial.println();
+    Serial.print("Battery voltage... ");
+    Serial.println((float(analogRead(RAK7200_S76G_ADC_VBAT)) / 4096 * 3.3 / 0.6 * 10));
     Serial.println();
     Serial.println();
 
@@ -454,11 +522,70 @@ void setup() {
     pinMode(RAK7200_S76G_LIS3DH_INT1, INPUT);
     attachInterrupt(digitalPinToInterrupt(RAK7200_S76G_LIS3DH_INT1), LIS3DH_INT1_ISR, RISING);
     Serial.println("RAK7200 S76G LIS3DH Interrupt INT1 Enabled");
+    // RAK7200 S76G LIS3DH (U5) (I2C address 0x19) Interrupt INT2 GPIO PB5 (RAK7200_S76G_LIS3DH_INT2)
+    pinMode(RAK7200_S76G_LIS3DH_INT2, INPUT);
+    attachInterrupt(digitalPinToInterrupt(RAK7200_S76G_LIS3DH_INT2), LIS3DH_INT2_ISR, RISING);
+    Serial.println("RAK7200 S76G LIS3DH Interrupt INT2 Enabled");
+
+/* SparkFun Example
+    // Configure LIS3DH to enable intrerrupt INT1
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x20, 0x57); // CTRL_REG1 (20h) Output Data Rate (ODR) 100 Hz; normal-power mode enable; X, Y and Z axises enabled
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x21, 0x00); // CTRL_REG2 (21h) Disable High-pass filters
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x23, 0x00); // CTRL_REG4 (23h) Full-scale selection. default value: 00 (00:±2g; 01:±4g; 10:±8g; 11:±16g)
+
+    // INT1
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x30, 0x7F); // INT1_CFG (30h) 6 direction detection function enabled
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x32, 0x10); // INT1_THS (32h) 1 LSb = 16 mg @ FS = ±2 g
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x33, 0x00); // INT1_DURATION (33h) 1 LSb = 1/ODR seconds
+
+    // INT2
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x34, 0x7F); // INT2_CFG (34h) 6 direction detection function enabled
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x36, 0x10); // INT2_THS (36h) 1 LSb = 16 mg @ FS = ±2 g
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x37, 0x00); // INT2_DURATION (37h) 1 LSb = 1/ODR seconds
+
+    Wire.beginTransmission(LIS3DH_ADDRESS_ALT);
+    Wire.write(0x24); // CTRL_REG5 (24h)
+    Wire.write(0x00); // 0x08 LIR_INT1 Latch interrupt request on INT1_SRC (31h) register, with INT1_SRC (31h) register cleared by reading INT1_SRC (31h) itself
+                      // 0x02 LIR_INT2 Latch interrupt request on INT2_SRC (35h) register, with INT2_SRC (35h) register cleared by reading INT2_SRC (35h) itself
+    Wire.endTransmission();
+
+    Wire.beginTransmission(LIS3DH_ADDRESS_ALT);
+    Wire.write(0x22); // CTRL_REG3 (22h)
+    ////Wire.write(0x20); // Activity Interrupt 2 (IA2) interrupt on INT1
+    Wire.write(0x60); // Activity Interrupt 1 (IA1) interrupt on INT1
+    ////Wire.write(0x80); // Click interrupt on INT1
+    Wire.endTransmission();
+
+    Wire.beginTransmission(LIS3DH_ADDRESS_ALT);
+    Wire.write(0x25); // CTRL_REG6 (25h)
+    Wire.write(0x00);
+    //Wire.write(0x20); // Enable interrupt 2 function on INT2 pin
+    //Wire.write(0x40); // Enable interrupt 1 function on INT2 pin
+    //Wire.write(0x80); // Click interrupt on INT2 pin
+    Wire.endTransmission();
+*/
+
     Serial.println();
     Serial.println();
     Serial.println();
+
+// STM Wake example
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x21, 0x09); // CTRL_REG2 (21h) Filtered data selection; High-pass filter enabled for AOI function on interrupt 1
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x22, 0x40); // CTRL_REG3 (22h) Activity Interrupt 1 (IA1) interrupt on INT1
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x25, 0x80); // CTRL_REG6 (25h) Click interrupt on INT2 pin
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x24, 0x08); // CTRL_REG5 (24h) 0x08 LIR_INT1 Latch interrupt request on INT1_SRC (31h) register, with INT1_SRC (31h) register cleared by reading INT1_SRC (31h) itself
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x32, 0x04); // INT1_THS (32h) 1 LSb = 16 mg @ FS = ±2 g
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x33, 0x00); // INT1_DURATION (33h) 1 LSb = 1/ODR seconds
+    I2CData = I2CreadByte(LIS3DH_ADDRESS_ALT, 0x26); // REFERENCE (26h)
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x30, 0x2A); // INT1_CFG (30h) Enable XH, YH, ZH
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x23, 0x08); // CTRL_REG4 (23h) Full-scale selection. default value: 00 (00:±2g; 01:±4g; 10:±8g; 11:±16g)
+    I2CwriteByte(LIS3DH_ADDRESS_ALT, 0x20, 0x57); // CTRL_REG1 (20h) Output Data Rate (ODR) 100 Hz; normal-power mode enable; X, Y and Z axises enabled
 }
 
 void loop() {
-    SerialPassThrough();
+    //SerialPassThrough();
+    if (INT1_IRQ) {
+      INT1_IRQ = false;
+      Serial.println(I2CreadByte(LIS3DH_ADDRESS_ALT, 0x31), HEX); // LIS3DH INT1_SRC (31h)
+    }
 }
